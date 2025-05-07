@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">expensify</string>
+    <string name="email">Email</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="password">Password</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="already_an_user_login_here">Already an user? Login here!</string>
+    <string name="login">Login</string>
+    <string name="not_yet_registered_sign_up">Not yet registered? Sign Up!</string>
+    <string name="no_account_sign_up">No account? Sign Up!</string>
+    <string name="welcome_back_to_expensify_nlogin">Welcome back to Expensify!\nLogin</string>
+    <string name="welcome_back_nlogin">Welcome back!\nLogin</string>
+    <string name="welcome_nregister">Welcome!\nRegister</string>
+    <string name="welcome_to_our_app">Welcome to our app!</string>
+    <string name="effortless_travel_expense_management">Effortless Travel Expense Management</string>
+    <string name="expensify_helps_travel_groups_track_shared_costs_simplify_settlements_and_eliminate_confusion_ncreate_group_trips_log_expenses_assign_payers_and_let_the_app_do_the_math_all_in_a_smooth_mobile_friendly_experience">Expensify helps travel groups track shared costs, simplify settlements, and eliminate confusion.\nCreate group trips, log expenses, assign payers, and let the app do the math — all in a smooth, mobile-friendly experience.</string>
+    <string name="track_split_settle_travel_stress_free">Track. Split. Settle. Travel Stress-Free.</string>
+    <string name="no_account_yet_sign_up">No account yet? Sign Up!</string>
 </resources>

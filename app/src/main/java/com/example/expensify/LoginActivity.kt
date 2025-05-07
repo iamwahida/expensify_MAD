@@ -2,15 +2,10 @@ package com.example.expensify
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.expensify.databinding.ActivityLoginBinding
 import com.google.firebase.auth.FirebaseAuth
-import kotlin.math.sign
 
 class LoginActivity: AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
@@ -45,6 +40,5 @@ class LoginActivity: AppCompatActivity() {
             val signupIntent = Intent(this, SignupActivity::class.java)
             startActivity(signupIntent)
         }
-
     }
 }

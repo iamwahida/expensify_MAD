@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/main_background"
+    android:background="@drawable/lavender2"
     tools:context=".MainActivity">
 
     <ImageView
@@ -19,5 +19,18 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <Button
+        android:id="@+id/createTripButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Trip"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:background="@drawable/rounded_button"
+        android:elevation="6dp"
+        android:layout_marginTop="36dp"
+        android:layout_marginStart="144dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/logoutIcon" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

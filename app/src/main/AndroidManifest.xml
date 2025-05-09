@@ -36,5 +36,6 @@
                 android:value=""/>
         </activity>
         <activity android:name=".CreateTripActivity" />
+        <activity android:name=".AddExpenseActivity" />
     </application>
 </manifest>

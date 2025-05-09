@@ -54,10 +54,14 @@ class CreateTripActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            val creator = getCurrentUsername()
+            if (!members.contains(creator)) members.add(creator)
+
             val trip = hashMapOf(
                 "name" to tripName,
                 "members" to members,
-                "createdBy" to getCurrentUsername()
+                "createdBy" to creator,
+                "createdAt" to System.currentTimeMillis()
             )
 
             db.collection("trips")
@@ -69,8 +73,9 @@ class CreateTripActivity : AppCompatActivity() {
                     startActivity(intent)
                     finish()
                 }
-                .addOnFailureListener {
-                    Toast.makeText(this, "Failed to create trip.", Toast.LENGTH_SHORT).show()
+                .addOnFailureListener { e ->
+                    Toast.makeText(this, "Failed to create trip: ${e.message}", Toast.LENGTH_SHORT).show()
+                    e.printStackTrace()
                 }
         }
     }

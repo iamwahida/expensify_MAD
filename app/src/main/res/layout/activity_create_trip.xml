@@ -18,7 +18,7 @@
         android:id="@+id/memberEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Add Member (email prefix)"
+        android:hint="Add Member (username before @)"
         android:inputType="textPersonName"
         android:layout_marginTop="16dp"/>
 

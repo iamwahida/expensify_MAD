@@ -39,7 +39,7 @@ class CreateTripActivity : AppCompatActivity() {
         membersListView.adapter = adapter
 
         addMemberButton.setOnClickListener {
-            val member = memberEditText.text.toString().trim()
+            val member = memberEditText.text.toString().trim().substringBefore("@")
             if (member.isNotEmpty() && !members.contains(member)) {
                 members.add(member)
                 adapter.notifyDataSetChanged()

@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.*
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.geometry.isEmpty
-import androidx.compose.ui.semantics.text
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -16,7 +14,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var createTripButton: Button
     private lateinit var logoutIcon: ImageView
     private lateinit var addExpenseButton: Button
-    private lateinit var loadingText: TextView
+
+    private lateinit var tripNameText: TextView
+    private lateinit var membersListText: TextView
+    private lateinit var expensesListLayout: LinearLayout
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -27,7 +28,9 @@ class MainActivity : ComponentActivity() {
         logoutIcon = findViewById(R.id.logoutIcon)
         createTripButton = findViewById(R.id.createTripButton)
         addExpenseButton = findViewById(R.id.addExpenseButton)
-        loadingText = findViewById(R.id.loadingText)
+        tripNameText = findViewById(R.id.tripName)
+        membersListText = findViewById(R.id.membersList)
+        expensesListLayout = findViewById(R.id.expensesListLayout)
 
         logoutIcon.setOnClickListener {
             val intent = Intent(this, LoginActivity::class.java)
@@ -39,15 +42,13 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(this, CreateTripActivity::class.java)
             startActivity(intent)
         }
-
-        fetchLatestTrip()
     }
 
     private fun fetchLatestTrip() {
         val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
         if (currentUserEmail == null) {
             Log.e("TRIP_DEBUG", "User not logged in.")
-            loadingText.text = "User not logged in."
+            tripNameText.text = "User not logged in."
             addExpenseButton.isEnabled = false
             return
         }
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
             .addOnSuccessListener { documents ->
                 if (documents.isEmpty) {
                     Log.d("TRIP_DEBUG", "No trips found for user: $currentUsername")
-                    loadingText.text = "No trips found."
+                    tripNameText.text = "No active trips."
                     addExpenseButton.isEnabled = false
                     return@addOnSuccessListener
                 }
@@ -72,22 +73,67 @@ class MainActivity : ComponentActivity() {
                 val tripName = trip.getString("name") ?: "Unnamed Trip"
                 val members = trip.get("members") as? List<String> ?: listOf()
 
-                Log.d("TRIP_DEBUG", "Successfully fetched trip: $tripName, Members: $members")
+                Log.d("TRIP_DEBUG", "Fetched trip: $tripName, Members: $members")
 
-                loadingText.text = "Active Trip: $tripName\nMembers: ${members.joinToString(", ")}"
+                tripNameText.text = tripName
+                membersListText.text = members.joinToString("\n") { "• $it" }
 
                 addExpenseButton.isEnabled = true
                 addExpenseButton.setOnClickListener {
                     val intent = Intent(this, AddExpenseActivity::class.java)
                     intent.putExtra("tripId", trip.id)
-                    intent.putExtra("members", ArrayList(members)) // Required by intent
+                    intent.putExtra("members", ArrayList(members))
                     startActivity(intent)
                 }
+
+                // Now also load expenses
+                fetchExpensesForTrip(trip.id)
             }
             .addOnFailureListener { e ->
                 Log.e("TRIP_DEBUG", "Error loading trip for user: $currentUsername", e)
-                loadingText.text = "Failed to load trip."
+                tripNameText.text = "Failed to load trip."
                 addExpenseButton.isEnabled = false
+            }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        fetchLatestTrip()
+    }
+
+    private fun fetchExpensesForTrip(tripId: String) {
+        expensesListLayout.removeAllViews() // Always clear before adding!
+
+        db.collection("expenses")
+            .whereEqualTo("tripId", tripId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(5)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) {
+                    val noExpenses = TextView(this)
+                    noExpenses.text = "No expenses yet."
+                    noExpenses.textSize = 15f
+                    noExpenses.setPadding(8, 8, 8, 8)
+                    expensesListLayout.addView(noExpenses)
+                } else {
+                    for (doc in documents) {
+                        val description = doc.getString("description") ?: "No description"
+                        val amount = doc.getDouble("amount") ?: 0.0
+                        val paidBy = doc.getString("paidBy") ?: "Unknown"
+
+                        val expenseText = TextView(this)
+                        expenseText.text = "$description - €$amount (Paid by $paidBy)"
+                        expenseText.textSize = 15f
+                        expenseText.setPadding(8, 8, 8, 8)
+                        expenseText.setTextColor(resources.getColor(R.color.black))
+
+                        expensesListLayout.addView(expenseText)
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("EXPENSES_DEBUG", "Error fetching expenses", e)
             }
     }
 }

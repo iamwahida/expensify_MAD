@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/lavender2">
+
+    <EditText
+        android:id="@+id/tripNameEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Trip Name"
+        android:inputType="textPersonName" />
+
+    <EditText
+        android:id="@+id/memberEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Add Member (email prefix)"
+        android:inputType="textPersonName"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/addMemberButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Member"
+        android:layout_marginTop="8dp"/>
+
+    <ListView
+        android:id="@+id/membersListView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/saveTripButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Create Trip"
+        android:layout_marginTop="24dp" />
+</LinearLayout>

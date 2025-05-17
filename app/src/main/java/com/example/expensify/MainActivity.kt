@@ -5,13 +5,17 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var createTripButton: Button
+    private lateinit var viewAllTripsButton: Button
+
     private lateinit var logoutIcon: ImageView
     private lateinit var addExpenseButton: Button
 
@@ -21,12 +25,26 @@ class MainActivity : ComponentActivity() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    private val tripResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val selectedTripId = data?.getStringExtra("selectedTripId")
+            if (selectedTripId != null) {
+                fetchTripById(selectedTripId)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         logoutIcon = findViewById(R.id.logoutIcon)
         createTripButton = findViewById(R.id.createTripButton)
+        viewAllTripsButton = findViewById(R.id.viewAllTripsButton)
+
         addExpenseButton = findViewById(R.id.addExpenseButton)
         tripNameText = findViewById(R.id.tripName)
         membersListText = findViewById(R.id.membersList)
@@ -42,7 +60,13 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(this, CreateTripActivity::class.java)
             startActivity(intent)
         }
+
+        viewAllTripsButton.setOnClickListener {
+            val intent = Intent(this, AllTripsActivity::class.java)
+            tripResultLauncher.launch(intent)
+        }
     }
+
 
     private fun fetchLatestTrip() {
         val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
@@ -101,6 +125,31 @@ class MainActivity : ComponentActivity() {
         fetchLatestTrip()
     }
 
+    private fun fetchTripById(tripId: String) {
+        db.collection("trips").document(tripId)
+            .get()
+            .addOnSuccessListener { trip ->
+                val tripName = trip.getString("name") ?: "Unnamed Trip"
+                val members = trip.get("members") as? List<String> ?: listOf()
+
+                tripNameText.text = tripName
+                membersListText.text = members.joinToString("\n") { "• $it" }
+
+                addExpenseButton.isEnabled = true
+                addExpenseButton.setOnClickListener {
+                    val intent = Intent(this, AddExpenseActivity::class.java)
+                    intent.putExtra("tripId", trip.id)
+                    intent.putExtra("members", ArrayList(members))
+                    startActivity(intent)
+                }
+
+                fetchExpensesForTrip(trip.id)
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Trip could not be loaded", Toast.LENGTH_SHORT).show()
+            }
+    }
+
     private fun fetchExpensesForTrip(tripId: String) {
         expensesListLayout.removeAllViews() // Always clear before adding!
 
@@ -136,4 +185,6 @@ class MainActivity : ComponentActivity() {
                 Log.e("EXPENSES_DEBUG", "Error fetching expenses", e)
             }
     }
+
 }
+

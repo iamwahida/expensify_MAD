@@ -8,7 +8,7 @@
     android:background="@drawable/lavender2"
     tools:context=".MainActivity">
 
-    <!-- Logout Icon -->
+    <!-- Logout Icon
     <ImageView
         android:id="@+id/logoutIcon"
         android:layout_width="48dp"
@@ -18,21 +18,51 @@
         android:src="@drawable/baseline_logout_24"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+        -->
+    <ImageButton
+        android:id="@+id/logoutIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="50dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Logout"
+        android:src="@drawable/baseline_logout_24"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+
+
+    <!-- Vie all trips Button -->
+
 
     <!-- Create Trip Button -->
+    <Button
+        android:id="@+id/viewAllTripsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:text="@string/view_all_trips"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/logoutIcon" />
+
     <Button
         android:id="@+id/createTripButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:elevation="8dp"
         android:text="Create Trip"
         android:textColor="@color/white"
         android:textSize="16sp"
-        android:background="@drawable/rounded_button"
-        android:elevation="8dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/logoutIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.84"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/logoutIcon" />
 
     <!-- Trip Info Card -->
     <androidx.cardview.widget.CardView

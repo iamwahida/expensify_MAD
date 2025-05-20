@@ -22,6 +22,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var tripNameText: TextView
     private lateinit var membersListText: TextView
     private lateinit var expensesListLayout: LinearLayout
+    private var skipLatestTripLoad = false
+
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -32,6 +34,7 @@ class MainActivity : ComponentActivity() {
             val data = result.data
             val selectedTripId = data?.getStringExtra("selectedTripId")
             if (selectedTripId != null) {
+                skipLatestTripLoad = true
                 fetchTripById(selectedTripId)
             }
         }
@@ -49,6 +52,7 @@ class MainActivity : ComponentActivity() {
         tripNameText = findViewById(R.id.tripName)
         membersListText = findViewById(R.id.membersList)
         expensesListLayout = findViewById(R.id.expensesListLayout)
+
 
         logoutIcon.setOnClickListener {
             val intent = Intent(this, LoginActivity::class.java)
@@ -122,8 +126,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        fetchLatestTrip()
+        if (!skipLatestTripLoad) {
+            fetchLatestTrip()
+        } else {
+            skipLatestTripLoad = false // reset it for next time
+        }
     }
+
 
     private fun fetchTripById(tripId: String) {
         db.collection("trips").document(tripId)
@@ -153,12 +162,16 @@ class MainActivity : ComponentActivity() {
     private fun fetchExpensesForTrip(tripId: String) {
         expensesListLayout.removeAllViews() // Always clear before adding!
 
+        val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
+        val currentUsername = currentUserEmail?.substringBefore("@") ?: "unknown"
+
         db.collection("expenses")
             .whereEqualTo("tripId", tripId)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(5)
             .get()
             .addOnSuccessListener { documents ->
+                Log.d("EXPENSES_DEBUG", "Fetched ${documents.size()} expenses")
                 if (documents.isEmpty) {
                     val noExpenses = TextView(this)
                     noExpenses.text = "No expenses yet."
@@ -170,14 +183,41 @@ class MainActivity : ComponentActivity() {
                         val description = doc.getString("description") ?: "No description"
                         val amount = doc.getDouble("amount") ?: 0.0
                         val paidBy = doc.getString("paidBy") ?: "Unknown"
+                        val participants = doc.get("participants") as? List<String> ?: emptyList()
 
                         val expenseText = TextView(this)
-                        expenseText.text = "$description - €$amount (Paid by $paidBy)"
+                        expenseText.text = "$description - €${"%.2f".format(amount)} (Paid by $paidBy)"
                         expenseText.textSize = 15f
-                        expenseText.setPadding(8, 8, 8, 8)
+                        expenseText.setPadding(8, 12, 8, 4)
                         expenseText.setTextColor(resources.getColor(R.color.black))
 
                         expensesListLayout.addView(expenseText)
+
+                        val debts = DebtCalculationUtil.calculateDebts(paidBy, participants, amount)
+
+                        for (debt in debts) {
+                            val line = when (debt.from) {
+                                currentUsername -> "🔴 You owe ${debt.to} €${"%.2f".format(debt.amount)}"
+                                debt.to -> "🟢 ${debt.from} owes you €${"%.2f".format(debt.amount)}"
+                                else -> "⚪ ${debt.from} owes ${debt.to} €${"%.2f".format(debt.amount)}"
+                            }
+
+                            val splitText = TextView(this)
+                            splitText.text = line
+                            splitText.setPadding(16, 0, 8, 4)
+                            splitText.textSize = 14f
+                            splitText.setTextColor(resources.getColor(R.color.gray))
+
+                            // kann man eig. ersetzen wenn mein pro expense in einer Cardview macht
+                            val expenseParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            expenseParams.setMargins(0, 0, 0, 16) // bottom = 16px (~8dp)
+                            expenseText.layoutParams = expenseParams
+
+                            expensesListLayout.addView(splitText)
+                        }
                     }
                 }
             }
@@ -185,6 +225,7 @@ class MainActivity : ComponentActivity() {
                 Log.e("EXPENSES_DEBUG", "Error fetching expenses", e)
             }
     }
+
 
 }
 

@@ -79,6 +79,7 @@ class AddExpenseActivity : AppCompatActivity() {
             .add(expense)
             .addOnSuccessListener {
                 Toast.makeText(this, "Expense saved!", Toast.LENGTH_SHORT).show()
+                setResult(RESULT_OK) //realod page directly
                 finish()
             }
             .addOnFailureListener {

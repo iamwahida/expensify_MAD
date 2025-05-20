@@ -32,10 +32,7 @@
 
 
 
-    <!-- Vie all trips Button -->
-
-
-    <!-- Create Trip Button -->
+    <!-- View all trips Button -->
     <Button
         android:id="@+id/viewAllTripsButton"
         android:layout_width="wrap_content"
@@ -49,6 +46,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/logoutIcon" />
 
+    <!-- Create Trip Button -->
     <Button
         android:id="@+id/createTripButton"
         android:layout_width="wrap_content"

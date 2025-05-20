@@ -38,5 +38,6 @@
         <activity android:name=".CreateTripActivity" />
         <activity android:name=".AddExpenseActivity" />
         <activity android:name=".AllTripsActivity" />
+        <activity android:name=".TripDetailsActivity" />
     </application>
 </manifest>

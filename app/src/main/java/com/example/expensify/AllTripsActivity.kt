@@ -3,6 +3,7 @@ package com.example.expensify
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
@@ -14,7 +15,9 @@ class AllTripsActivity : AppCompatActivity() {
     private lateinit var tripsListView: ListView
     private val db = FirebaseFirestore.getInstance()
     private val tripsList = mutableListOf<String>()
-    private val tripIdMap = mutableMapOf<String, String>() // Mapping von Name zu Trip-ID
+    private val tripIdMap = mutableMapOf<String, String>()
+    private lateinit var adapter: TripAdapter
+    private val tripList = mutableListOf<TripItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,28 +27,36 @@ class AllTripsActivity : AppCompatActivity() {
         supportActionBar?.title = "Your Trips"
 
         tripsListView = findViewById(R.id.tripsListView)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, tripsList)
-        tripsListView.adapter = adapter
 
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        val username = currentUser?.email?.substringBefore("@") ?: return
-
-        db.collection("trips")
-            .whereArrayContains("members", username)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { documents ->
-                for (doc in documents) {
-                    val name = doc.getString("name") ?: "Unnamed Trip"
-                    val displayName = "$name (${doc.id.takeLast(5)})"
-                    tripsList.add(displayName)
-                    tripIdMap[displayName] = doc.id
+        adapter = TripAdapter(
+            this,
+            tripList,
+            onDelete = { trip ->
+                db.collection("trips").document(trip.id).delete().addOnSuccessListener {
+                    loadTrips()
+                    Toast.makeText(this, "Trip deleted", Toast.LENGTH_SHORT).show()
                 }
-                adapter.notifyDataSetChanged()
+            },
+            onEdit = { updatedTrip ->
+                val tripRef = db.collection("trips").document(updatedTrip.id)
+                tripRef.update(
+                    mapOf(
+                        "name" to updatedTrip.name,
+                        "expenses" to updatedTrip.expenses
+                    )
+                ).addOnSuccessListener {
+                    Log.d("FIRESTORE_DEBUG", "Trip updated: ${updatedTrip.name}, ${updatedTrip.expenses}")
+                    loadTrips()
+                    Toast.makeText(this, "Trip updated", Toast.LENGTH_SHORT).show()
+
+                }.addOnFailureListener {
+                    Log.e("FIRESTORE_DEBUG", "Update failed", it)
+                    Toast.makeText(this, "Error while updating", Toast.LENGTH_SHORT).show()
+                }
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Error loading trips", Toast.LENGTH_SHORT).show()
-            }
+        )
+
+        tripsListView.adapter = adapter
 
         tripsListView.setOnItemClickListener { _, _, position, _ ->
             val selectedName = tripsList[position]
@@ -57,6 +68,47 @@ class AllTripsActivity : AppCompatActivity() {
                 finish()
             }
         }
+
+        loadTrips()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTrips()
+    }
+
+    private fun loadTrips() {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        val username = currentUser?.email?.substringBefore("@") ?: return
+
+        db.collection("trips")
+            .whereArrayContains("members", username)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { documents ->
+                tripList.clear()
+                tripsList.clear()
+                tripIdMap.clear()
+
+                for (doc in documents) {
+                    val name = doc.getString("name") ?: "Unnamed Trip"
+                    val expenses = doc.getDouble("expenses") ?: 0.0
+                    val tripId = doc.id
+
+                    val tripItem = TripItem(
+                        id = tripId,
+                        name = name,
+                        expenses = expenses
+                    )
+                    tripList.add(tripItem)
+                    tripsList.add(name)
+                    tripIdMap[name] = tripId
+                }
+                adapter.notifyDataSetChanged()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Error loading trips", Toast.LENGTH_SHORT).show()
+            }
     }
 
     override fun onSupportNavigateUp(): Boolean {

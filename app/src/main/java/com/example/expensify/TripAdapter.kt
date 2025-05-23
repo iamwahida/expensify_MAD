@@ -39,10 +39,7 @@ class TripAdapter(
             val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_edit_trip, null)
 
             val nameInput = dialogView.findViewById<EditText>(R.id.editTripName)
-            val expensesInput = dialogView.findViewById<EditText>(R.id.editTripExpenses)
-
             nameInput.setText(trip.name)
-            expensesInput.setText(trip.expenses.toString())
 
             AlertDialog.Builder(context)
                 .setTitle("Edit Trip")
@@ -51,13 +48,9 @@ class TripAdapter(
                     //Toast.makeText(context, "Save clicked", Toast.LENGTH_SHORT).show()
 
                     val newName = nameInput.text.toString().trim()
-                    val newExpensesText = expensesInput.text.toString().trim()
-                    val newExpenses = newExpensesText.toDoubleOrNull() ?: 0.0
-                    Log.d("EDIT_DIALOG", "New name: $newName, New expenses text: $newExpensesText")
-
 
                     if (newName.isNotEmpty()) {
-                        onEdit(trip.copy(name = newName, expenses = newExpenses))
+                        onEdit(trip.copy(name = newName))
                     }
                 }
                 .setNegativeButton("Cancel", null)

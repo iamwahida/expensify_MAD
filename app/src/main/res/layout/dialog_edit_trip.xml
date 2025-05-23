@@ -11,10 +11,4 @@
         android:layout_height="wrap_content"
         android:hint="Trip Name" />
 
-    <EditText
-        android:id="@+id/editTripExpenses"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Expenses"
-        android:inputType="numberDecimal" />
 </LinearLayout>

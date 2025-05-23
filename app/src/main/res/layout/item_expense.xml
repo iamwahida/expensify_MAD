@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/expenseDescriptionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Description"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/expenseAmountText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10.0 €"
+            android:textSize="18sp"
+            android:textColor="#666666"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/editExpenseIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/baseline_edit_24"
+        android:textSize="20sp"
+        android:layout_marginStart="12dp"
+        android:contentDescription="Edit" />
+
+    <ImageView
+        android:id="@+id/deleteIcon"
+        android:layout_width="24dp"
+        android:textSize="20sp"
+        android:layout_height="24dp"
+        android:src="@drawable/baseline_delete_24"
+        android:layout_marginStart="12dp"
+        android:contentDescription="Delete" />
+</LinearLayout>

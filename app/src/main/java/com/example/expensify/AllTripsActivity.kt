@@ -42,10 +42,10 @@ class AllTripsActivity : AppCompatActivity() {
                 tripRef.update(
                     mapOf(
                         "name" to updatedTrip.name,
-                        "expenses" to updatedTrip.expenses
                     )
                 ).addOnSuccessListener {
-                    Log.d("FIRESTORE_DEBUG", "Trip updated: ${updatedTrip.name}, ${updatedTrip.expenses}")
+                    Log.d("FIRESTORE_DEBUG", "Trip updated: ${updatedTrip.name}")
+                    updateTripTotal(updatedTrip.id)
                     loadTrips()
                     Toast.makeText(this, "Trip updated", Toast.LENGTH_SHORT).show()
 
@@ -108,6 +108,16 @@ class AllTripsActivity : AppCompatActivity() {
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Error loading trips", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun updateTripTotal(tripId: String) {
+        db.collection("expenses")
+            .whereEqualTo("tripId", tripId)
+            .get()
+            .addOnSuccessListener { docs ->
+                val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
+                db.collection("trips").document(tripId).update("expenses", total)
             }
     }
 

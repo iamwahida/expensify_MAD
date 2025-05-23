@@ -79,6 +79,7 @@ class AddExpenseActivity : AppCompatActivity() {
             .add(expense)
             .addOnSuccessListener {
                 Toast.makeText(this, "Expense saved!", Toast.LENGTH_SHORT).show()
+                updateTripTotal(tripId)
                 setResult(RESULT_OK) //realod page directly
                 finish()
             }
@@ -86,4 +87,18 @@ class AddExpenseActivity : AppCompatActivity() {
                 Toast.makeText(this, "Error saving expense", Toast.LENGTH_SHORT).show()
             }
     }
+    private fun updateTripTotal(tripId: String) {
+        db.collection("expenses")
+            .whereEqualTo("tripId", tripId)
+            .get()
+            .addOnSuccessListener { docs ->
+                val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
+                db.collection("trips").document(tripId)
+                    .update("expense", total)  // 👈 evtl. Attributname anpassen!
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Fehler beim Aktualisieren der Gesamtsumme", Toast.LENGTH_SHORT).show()
+            }
+    }
+
 }

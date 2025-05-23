@@ -64,14 +64,18 @@ class ViewAllExpensesActivity : AppCompatActivity() {
             }
     }
 
-
     private fun updateTripTotal(tripId: String) {
         db.collection("expenses")
             .whereEqualTo("tripId", tripId)
             .get()
             .addOnSuccessListener { docs ->
                 val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
-                db.collection("trips").document(tripId).update("expenses", total)
+                db.collection("trips").document(tripId)
+                    .update("expense", total)
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Fehler beim Aktualisieren der Gesamtsumme", Toast.LENGTH_SHORT).show()
             }
     }
+
 }

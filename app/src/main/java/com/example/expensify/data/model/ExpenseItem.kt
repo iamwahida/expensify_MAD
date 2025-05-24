@@ -1,10 +1,5 @@
-package com.example.expensify
+package com.example.expensify.data.model
 
-// created to represent indivdual expenses
-
-import androidx.annotation.Keep
-
-@Keep
 data class ExpenseItem(
     val id: String = "",
     val description: String = "",

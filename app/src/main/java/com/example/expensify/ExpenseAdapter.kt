@@ -5,16 +5,12 @@ import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
-
+import android.widget.*
 
 class ExpenseAdapter(
     private val context: Activity,
     private val expenses: List<ExpenseItem>,
+    private val tripMembers: List<String>,
     private val onDelete: (ExpenseItem) -> Unit,
     private val onEdit: (ExpenseItem) -> Unit
 ) : ArrayAdapter<ExpenseItem>(context, R.layout.item_expense, expenses) {
@@ -46,10 +42,18 @@ class ExpenseAdapter(
             val amountInput = dialogView.findViewById<EditText>(R.id.editExpenseAmount)
             val descInput = dialogView.findViewById<EditText>(R.id.editExpenseDescription)
             val paidByInput = dialogView.findViewById<EditText>(R.id.editExpensePaidBy)
+            val participantsLayout = dialogView.findViewById<LinearLayout>(R.id.editParticipantsLayout)
 
             amountInput.setText(expense.amount.toString())
             descInput.setText(expense.description)
             paidByInput.setText(expense.paidBy)
+
+            tripMembers.forEach { member ->
+                val cb = CheckBox(context)
+                cb.text = member
+                cb.isChecked = expense.participants.contains(member)
+                participantsLayout.addView(cb)
+            }
 
             AlertDialog.Builder(context)
                 .setTitle("Edit Expense")
@@ -59,11 +63,18 @@ class ExpenseAdapter(
                     val newDesc = descInput.text.toString().trim()
                     val newPaidBy = paidByInput.text.toString().trim()
 
-                    if (newAmount != null && newDesc.isNotEmpty() && newPaidBy.isNotEmpty()) {
+                    val newParticipants = mutableListOf<String>()
+                    for (i in 0 until participantsLayout.childCount) {
+                        val cb = participantsLayout.getChildAt(i) as CheckBox
+                        if (cb.isChecked) newParticipants.add(cb.text.toString())
+                    }
+
+                    if (newAmount != null && newDesc.isNotEmpty() && newPaidBy.isNotEmpty() && newParticipants.isNotEmpty()) {
                         onEdit(expense.copy(
                             amount = newAmount,
                             description = newDesc,
-                            paidBy = newPaidBy
+                            paidBy = newPaidBy,
+                            participants = newParticipants
                         ))
                     }
                 }
@@ -74,4 +85,3 @@ class ExpenseAdapter(
         return rowView
     }
 }
-

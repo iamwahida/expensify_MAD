@@ -1,3 +1,4 @@
+// ViewAllExpensesActivity.kt
 package com.example.expensify
 
 import android.annotation.SuppressLint
@@ -26,42 +27,47 @@ class ViewAllExpensesActivity : AppCompatActivity() {
     }
 
     private fun loadExpenses() {
-        // Beispiel-Trip-ID
         val tripId = intent.getStringExtra("tripId") ?: return
 
-        db.collection("expenses").whereEqualTo("tripId", tripId).get()
-            .addOnSuccessListener { result ->
-                expenseList.clear()
-                for (document in result) {
-                    val expense = document.toObject(ExpenseItem::class.java).copy(id = document.id)
-                    expenseList.add(expense)
-                }
+        db.collection("trips").document(tripId).get().addOnSuccessListener { tripSnapshot ->
+            val members = tripSnapshot.get("members") as? List<String> ?: emptyList()
 
-                val adapter = ExpenseAdapter(
-                    this,
-                    expenseList,
-                    onDelete = { expense ->
-                        db.collection("expenses").document(expense.id).delete().addOnSuccessListener {
-                            loadExpenses()
-                            updateTripTotal(expense.tripId)
-                        }
-                    },
-                    onEdit = { updatedExpense ->
-                        db.collection("expenses").document(updatedExpense.id)
-                            .update(mapOf(
-                                "amount" to updatedExpense.amount,
-                                "description" to updatedExpense.description,
-                                "paidBy" to updatedExpense.paidBy
-                            ))
-                            .addOnSuccessListener {
-                                loadExpenses()
-                                updateTripTotal(updatedExpense.tripId)
-                                Toast.makeText(this, "Expense updated", Toast.LENGTH_SHORT).show()
-                            }
+            db.collection("expenses").whereEqualTo("tripId", tripId).get()
+                .addOnSuccessListener { result ->
+                    expenseList.clear()
+                    for (document in result) {
+                        val expense = document.toObject(ExpenseItem::class.java).copy(id = document.id)
+                        expenseList.add(expense)
                     }
-                )
-                listView.adapter = adapter
-            }
+
+                    val adapter = ExpenseAdapter(
+                        this,
+                        expenseList,
+                        members,
+                        onDelete = { expense ->
+                            db.collection("expenses").document(expense.id).delete().addOnSuccessListener {
+                                loadExpenses()
+                                updateTripTotal(expense.tripId)
+                            }
+                        },
+                        onEdit = { updatedExpense ->
+                            db.collection("expenses").document(updatedExpense.id)
+                                .update(mapOf(
+                                    "amount" to updatedExpense.amount,
+                                    "description" to updatedExpense.description,
+                                    "paidBy" to updatedExpense.paidBy,
+                                    "participants" to updatedExpense.participants
+                                ))
+                                .addOnSuccessListener {
+                                    loadExpenses()
+                                    updateTripTotal(updatedExpense.tripId)
+                                    Toast.makeText(this, "Expense updated", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    )
+                    listView.adapter = adapter
+                }
+        }
     }
 
     private fun updateTripTotal(tripId: String) {
@@ -77,5 +83,4 @@ class ViewAllExpensesActivity : AppCompatActivity() {
                 Toast.makeText(this, "Fehler beim Aktualisieren der Gesamtsumme", Toast.LENGTH_SHORT).show()
             }
     }
-
 }

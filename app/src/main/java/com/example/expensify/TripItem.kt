@@ -1,6 +1,6 @@
 package com.example.expensify
 
-// created to represent indivdual trips
+// created to represent individual trips
 
 data class TripItem(
     val id: String,

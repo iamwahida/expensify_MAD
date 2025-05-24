@@ -23,4 +23,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Paid by (username)" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Split between:"
+        android:textSize="16sp"
+        android:layout_marginTop="12dp"/>
+
+    <LinearLayout
+        android:id="@+id/editParticipantsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
 </LinearLayout>

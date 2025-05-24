@@ -42,6 +42,7 @@ class AllTripsActivity : AppCompatActivity() {
                 tripRef.update(
                     mapOf(
                         "name" to updatedTrip.name,
+                        "members" to updatedTrip.members
                     )
                 ).addOnSuccessListener {
                     Log.d("FIRESTORE_DEBUG", "Trip updated: ${updatedTrip.name}")
@@ -94,11 +95,13 @@ class AllTripsActivity : AppCompatActivity() {
                     val name = doc.getString("name") ?: "Unnamed Trip"
                     val expenses = doc.getDouble("expenses") ?: 0.0
                     val tripId = doc.id
+                    val members = doc.get("members") as? List<String> ?: emptyList()
 
                     val tripItem = TripItem(
                         id = tripId,
                         name = name,
-                        expenses = expenses
+                        expenses = expenses,
+                        members = members
                     )
                     tripList.add(tripItem)
                     tripsList.add(name)

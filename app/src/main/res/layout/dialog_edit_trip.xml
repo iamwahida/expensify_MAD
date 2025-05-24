@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -11,4 +10,23 @@
         android:layout_height="wrap_content"
         android:hint="Trip Name" />
 
+    <EditText
+        android:id="@+id/addMemberInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Add Member (username before @)"
+        android:layout_marginTop="12dp"/>
+
+    <Button
+        android:id="@+id/addMemberButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Member"
+        android:layout_marginTop="8dp"/>
+
+    <ListView
+        android:id="@+id/editMembersList"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_marginTop="8dp" />
 </LinearLayout>

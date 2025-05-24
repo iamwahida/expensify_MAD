@@ -2,7 +2,6 @@ package com.example.expensify
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,18 +38,32 @@ class TripAdapter(
             val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_edit_trip, null)
 
             val nameInput = dialogView.findViewById<EditText>(R.id.editTripName)
+            val memberInput = dialogView.findViewById<EditText>(R.id.addMemberInput)
+            val addMemberBtn = dialogView.findViewById<Button>(R.id.addMemberButton)
+            val membersListView = dialogView.findViewById<ListView>(R.id.editMembersList)
+
             nameInput.setText(trip.name)
+
+            val members = trip.members.toMutableList()
+            val membersAdapter = ArrayAdapter(context, android.R.layout.simple_list_item_1, members)
+            membersListView.adapter = membersAdapter
+
+            addMemberBtn.setOnClickListener {
+                val newMember = memberInput.text.toString().trim().substringBefore("@")
+                if (newMember.isNotEmpty() && !members.contains(newMember)) {
+                    members.add(newMember)
+                    membersAdapter.notifyDataSetChanged()
+                    memberInput.text.clear()
+                }
+            }
 
             AlertDialog.Builder(context)
                 .setTitle("Edit Trip")
                 .setView(dialogView)
                 .setPositiveButton("Save") { _, _ ->
-                    //Toast.makeText(context, "Save clicked", Toast.LENGTH_SHORT).show()
-
                     val newName = nameInput.text.toString().trim()
-
                     if (newName.isNotEmpty()) {
-                        onEdit(trip.copy(name = newName))
+                        onEdit(trip.copy(name = newName, members = members))
                     }
                 }
                 .setNegativeButton("Cancel", null)

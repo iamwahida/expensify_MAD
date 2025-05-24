@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var tripNameText: TextView
     private lateinit var membersListText: TextView
     private lateinit var expensesListLayout: LinearLayout
+    private lateinit var oweSummaryLayout: LinearLayout
 
     private var skipLatestTripLoad = false
     private var currentTripId: String? = null
@@ -52,6 +53,7 @@ class MainActivity : ComponentActivity() {
         tripNameText = findViewById(R.id.tripName)
         membersListText = findViewById(R.id.membersList)
         expensesListLayout = findViewById(R.id.expensesListLayout)
+        oweSummaryLayout = findViewById(R.id.oweSummaryLayout)
 
         logoutIcon.setOnClickListener {
             val intent = Intent(this, LoginActivity::class.java)
@@ -190,9 +192,12 @@ class MainActivity : ComponentActivity() {
 
     private fun fetchExpensesForTrip(tripId: String) {
         expensesListLayout.removeAllViews()
+        oweSummaryLayout.removeAllViews()
 
         val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
         val currentUsername = currentUserEmail?.substringBefore("@") ?: "unknown"
+
+        val balances = mutableMapOf<String, Double>() // +ve = they owe you, -ve = you owe them
 
         db.collection("expenses")
             .whereEqualTo("tripId", tripId)
@@ -223,10 +228,18 @@ class MainActivity : ComponentActivity() {
                         expenseText.setTextColor(resources.getColor(R.color.black))
                         expensesListLayout.addView(expenseText)
 
-                        val debts =
-                            DebtCalculationUtil.calculateDebts(paidBy, participants, amount)
+                        val debts = DebtCalculationUtil.calculateDebts(paidBy, participants, amount)
 
                         for (debt in debts) {
+                            // Update balances (net)
+                            if (debt.to == currentUsername) {
+                                balances[debt.from] =
+                                    balances.getOrDefault(debt.from, 0.0) + debt.amount
+                            } else if (debt.from == currentUsername) {
+                                balances[debt.to] =
+                                    balances.getOrDefault(debt.to, 0.0) - debt.amount
+                            }
+
                             val line = when {
                                 debt.to == currentUsername -> "🟢 ${debt.from} owes you €${"%.2f".format(debt.amount)}"
                                 debt.from == currentUsername -> "🔴 You owe ${debt.to} €${"%.2f".format(debt.amount)}"
@@ -240,6 +253,33 @@ class MainActivity : ComponentActivity() {
                             splitText.setTextColor(resources.getColor(R.color.gray))
                             expensesListLayout.addView(splitText)
                         }
+                    }
+                }
+
+                // Show net balance summary (both positive and negative)
+                if (balances.isEmpty()) {
+                    val noDebts = TextView(this)
+                    noDebts.text = "No balances yet."
+                    noDebts.textSize = 15f
+                    noDebts.setPadding(8, 8, 8, 8)
+                    oweSummaryLayout.addView(noDebts)
+                } else {
+                    for ((user, balance) in balances) {
+                        val summaryText = TextView(this)
+                        when {
+                            balance > 0.01 -> {
+                                summaryText.text = "🟢 $user owes you €${"%.2f".format(balance)}"
+                                summaryText.setTextColor(resources.getColor(R.color.black))
+                            }
+                            balance < -0.01 -> {
+                                summaryText.text = "🔴 You owe $user €${"%.2f".format(-balance)}"
+                                summaryText.setTextColor(resources.getColor(R.color.black))
+                            }
+                            else -> continue // skip if settled
+                        }
+                        summaryText.textSize = 15f
+                        summaryText.setPadding(8, 4, 8, 4)
+                        oweSummaryLayout.addView(summaryText)
                     }
                 }
             }

@@ -80,7 +80,7 @@ class AddExpenseActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 Toast.makeText(this, "Expense saved!", Toast.LENGTH_SHORT).show()
                 updateTripTotal(tripId)
-                setResult(RESULT_OK) //realod page directly
+                setResult(RESULT_OK) //reload page directly
                 finish()
             }
             .addOnFailureListener {
@@ -94,10 +94,10 @@ class AddExpenseActivity : AppCompatActivity() {
             .addOnSuccessListener { docs ->
                 val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
                 db.collection("trips").document(tripId)
-                    .update("expense", total)  // 👈 evtl. Attributname anpassen!
+                    .update("expense", total)
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Fehler beim Aktualisieren der Gesamtsumme", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Encountered Error while updating sum.", Toast.LENGTH_SHORT).show()
             }
     }
 

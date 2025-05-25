@@ -1,6 +1,4 @@
-package com.example.expensify
-
-// created to represent indivdual expenses
+package com.example.expensify.model
 
 import androidx.annotation.Keep
 import com.google.firebase.firestore.DocumentSnapshot

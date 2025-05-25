@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.example.expensify.model.ExpenseItem
 import com.example.expensify.repository.TripRepository
 import com.example.expensify.service.ExpenseService
 import com.example.expensify.util.CsvExportUtil

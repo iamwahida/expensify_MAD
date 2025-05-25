@@ -5,7 +5,7 @@ import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.os.Environment
 import android.widget.Toast
-import com.example.expensify.ExpenseItem
+import com.example.expensify.model.ExpenseItem
 import java.io.File
 import java.io.FileOutputStream
 

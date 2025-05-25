@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.example.expensify.model.ExpenseItem
 
 class ExpenseAdapter(
     private val context: Activity,

@@ -1,6 +1,6 @@
 package com.example.expensify.util
 
-import com.example.expensify.ExpenseItem
+import com.example.expensify.model.ExpenseItem
 
 object BalanceUtil {
 

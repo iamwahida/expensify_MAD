@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.expensify.model.TripItem
 import com.example.expensify.service.AuthService
 import com.example.expensify.service.TripService
 

@@ -1,6 +1,4 @@
-package com.example.expensify
-
-// created to represent individual trips
+package com.example.expensify.model
 
 data class TripItem(
     val id: String,

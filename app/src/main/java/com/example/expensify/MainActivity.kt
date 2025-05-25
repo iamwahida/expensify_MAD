@@ -8,6 +8,7 @@ import android.util.Log
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.expensify.model.toExpenseItem
 import com.example.expensify.service.AuthService
 import com.example.expensify.service.ExpenseService
 import com.example.expensify.service.TripService

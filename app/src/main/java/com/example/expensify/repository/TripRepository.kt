@@ -1,6 +1,6 @@
 package com.example.expensify.repository
 
-import com.example.expensify.TripItem
+import com.example.expensify.model.TripItem
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FirebaseFirestore

@@ -1,6 +1,6 @@
 package com.example.expensify.service
 
-import com.example.expensify.ExpenseItem
+import com.example.expensify.model.ExpenseItem
 import com.example.expensify.repository.ExpenseRepository
 import com.example.expensify.repository.TripRepository
 import com.google.android.gms.tasks.Task

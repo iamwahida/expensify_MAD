@@ -1,5 +1,6 @@
-package com.example.expensify
+package com.example.expensify.repository
 
+import com.example.expensify.ExpenseItem
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query

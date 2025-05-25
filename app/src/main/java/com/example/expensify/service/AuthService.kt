@@ -18,6 +18,10 @@ object AuthService {
         auth.signOut()
     }
 
+    fun isLoggedIn(): Boolean {
+        return auth.currentUser != null
+    }
+
     fun getCurrentUserEmail(): String? {
         return auth.currentUser?.email
     }

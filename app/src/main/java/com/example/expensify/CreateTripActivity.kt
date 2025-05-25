@@ -4,9 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.example.expensify.service.AuthService
 import com.example.expensify.service.TripService
-import com.example.expensify.util.AuthUtil
-import com.google.firebase.firestore.FirebaseFirestore
 
 class CreateTripActivity : AppCompatActivity() {
 
@@ -18,7 +17,6 @@ class CreateTripActivity : AppCompatActivity() {
 
     private val members = mutableListOf<String>()
     private lateinit var adapter: ArrayAdapter<String>
-    private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +50,7 @@ class CreateTripActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val creator = AuthUtil.getCurrentUsername()
+            val creator = AuthService.getCurrentUsername()
             if (creator == null) {
                 Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener

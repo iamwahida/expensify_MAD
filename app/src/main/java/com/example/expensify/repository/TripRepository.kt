@@ -59,7 +59,7 @@ object TripRepository {
     }
 
     fun updateTripTotal(tripId: String, total: Double): Task<Void> {
-        return tripsRef.document(tripId).update("expense", total)
+        return tripsRef.document(tripId).update("expenses", total)
     }
 
     fun deleteTrip(tripId: String): Task<Void> {

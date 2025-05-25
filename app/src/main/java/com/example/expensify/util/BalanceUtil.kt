@@ -19,7 +19,6 @@ object BalanceUtil {
                 balances[debt.to] = (balances[debt.to] ?: 0.0) + debt.amount
             }
         }
-
         return balances
     }
 }

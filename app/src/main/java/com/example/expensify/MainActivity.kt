@@ -9,7 +9,9 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import com.example.expensify.service.AuthService
+import com.example.expensify.service.ExpenseService
 import com.example.expensify.service.TripService
+import com.example.expensify.util.BalanceLabel
 import com.example.expensify.util.DebtUtil
 
 class MainActivity : ComponentActivity() {
@@ -71,19 +73,22 @@ class MainActivity : ComponentActivity() {
 
         viewAllExpensesButton.setOnClickListener {
             if (currentTripId == null) {
-                Toast.makeText(this, "No trip selected", Toast.LENGTH_SHORT).show()
+                showToast("No trip selected")
                 return@setOnClickListener
             }
 
-            ExpenseRepository.getExpensesForTrip(currentTripId!!)
-                .addOnSuccessListener { docs ->
-                    if (docs.isEmpty()) {
+            ExpenseService.getExpensesForTrip(currentTripId!!)
+                .addOnSuccessListener { expenses ->
+                    if (expenses.isEmpty()) {
                         showNoExpensesAlert()
                     } else {
                         val intent = Intent(this, ViewAllExpensesActivity::class.java)
                         intent.putExtra("tripId", currentTripId)
                         startActivity(intent)
                     }
+                }
+                .addOnFailureListener {
+                    showToast("Failed to load expenses")
                 }
         }
     }
@@ -165,7 +170,7 @@ class MainActivity : ComponentActivity() {
                 fetchExpensesForTrip(trip.id)
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Trip could not be loaded", Toast.LENGTH_SHORT).show()
+                showToast("Trip could not be loaded")
             }
     }
 
@@ -176,29 +181,21 @@ class MainActivity : ComponentActivity() {
         val username = AuthService.getCurrentUsername() ?: return
         val balances = mutableMapOf<String, Double>()
 
-        ExpenseRepository.getRecentExpenses(tripId, 5)
+        ExpenseService.getRecentExpenses(tripId, 5)
             .addOnSuccessListener { docs ->
                 if (docs.isEmpty) {
-                    val emptyView = TextView(this)
-                    emptyView.text = "No expenses yet."
-                    emptyView.textSize = 15f
-                    emptyView.setPadding(8, 8, 8, 8)
-                    expensesListLayout.addView(emptyView)
+                    expensesListLayout.addView(createTextView("No expenses yet."))
                     return@addOnSuccessListener
                 }
 
                 for (doc in docs) {
-                    val desc = doc.getString("description") ?: "No description"
-                    val amount = doc.getDouble("amount") ?: 0.0
-                    val paidBy = doc.getString("paidBy") ?: "Unknown"
-                    val participants = doc.get("participants") as? List<String> ?: emptyList()
+                    val expense = doc.toExpenseItem()
+                    val desc = expense.description
+                    val amount = expense.amount
+                    val paidBy = expense.paidBy
+                    val participants = expense.participants
 
-                    val expenseText = TextView(this)
-                    expenseText.text = "$desc - €${"%.2f".format(amount)} (Paid by $paidBy)"
-                    expenseText.textSize = 15f
-                    expenseText.setPadding(8, 12, 8, 4)
-                    expenseText.setTextColor(resources.getColor(R.color.black))
-                    expensesListLayout.addView(expenseText)
+                    addExpenseRow("$desc - €${"%.2f".format(amount)} (Paid by $paidBy)", expensesListLayout)
 
                     val debts = DebtUtil.calculateDebts(paidBy, participants, amount)
                     for (debt in debts) {
@@ -208,47 +205,62 @@ class MainActivity : ComponentActivity() {
                             balances[debt.to] = balances.getOrDefault(debt.to, 0.0) - debt.amount
                         }
 
-                        val line = when {
-                            debt.to == username -> "🟢 ${debt.from} owes you €${"%.2f".format(debt.amount)}"
-                            debt.from == username -> "🔴 You owe ${debt.to} €${"%.2f".format(debt.amount)}"
-                            else -> "⚪ ${debt.from} owes ${debt.to} €${"%.2f".format(debt.amount)}"
-                        }
+                        val line = BalanceLabel.fromDebt(username, debt.from, debt.to, debt.amount).render()
 
-                        val lineView = TextView(this)
-                        lineView.text = line
-                        lineView.setPadding(16, 0, 8, 4)
-                        lineView.textSize = 14f
-                        lineView.setTextColor(resources.getColor(R.color.gray))
-                        expensesListLayout.addView(lineView)
+                        addDebtRow(line, expensesListLayout)
                     }
                 }
 
                 if (balances.isEmpty()) {
-                    val noDebts = TextView(this)
-                    noDebts.text = "No balances yet."
-                    noDebts.textSize = 15f
-                    noDebts.setPadding(8, 8, 8, 8)
-                    oweSummaryLayout.addView(noDebts)
+                    addBalanceSummary("No balances yet.", oweSummaryLayout)
                 } else {
                     for ((user, balance) in balances) {
-                        val summaryText = TextView(this)
-                        summaryText.textSize = 15f
-                        summaryText.setPadding(8, 4, 8, 4)
-
-                        if (balance > 0.01) {
-                            summaryText.text = "🟢 $user owes you €${"%.2f".format(balance)}"
-                            summaryText.setTextColor(resources.getColor(R.color.black))
-                        } else if (balance < -0.01) {
-                            summaryText.text = "🔴 You owe $user €${"%.2f".format(-balance)}"
-                            summaryText.setTextColor(resources.getColor(R.color.black))
-                        } else continue
-
-                        oweSummaryLayout.addView(summaryText)
+                        val line = formatBalanceLine(user, balance)
+                        if (line.isNotEmpty()) {
+                            oweSummaryLayout.addView(createTextView(line))
+                        }
                     }
                 }
             }
             .addOnFailureListener {
                 Log.e("EXPENSES_DEBUG", "Error fetching expenses", it)
             }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun createTextView(text: String, size: Float = 15f, padding: Int = 8): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = size
+            setPadding(padding, padding, padding, padding)
+            setTextColor(resources.getColor(R.color.black))
+        }
+    }
+
+    private fun formatBalanceLine(user: String, balance: Double): String {
+        return when {
+            balance > 0.01 -> "🟢 $user owes you €${"%.2f".format(balance)}"
+            balance < -0.01 -> "🔴 You owe $user €${"%.2f".format(-balance)}"
+            else -> ""
+        }
+    }
+
+    private fun addExpenseRow(description: String, layout: LinearLayout) {
+        layout.addView(createTextView(description, size = 15f, padding = 8))
+    }
+
+    private fun addDebtRow(text: String, layout: LinearLayout) {
+        layout.addView(
+            createTextView(text, size = 14f, padding = 16).apply {
+                setTextColor(resources.getColor(R.color.gray))
+            }
+        )
+    }
+
+    private fun addBalanceSummary(text: String, layout: LinearLayout) {
+        layout.addView(createTextView(text))
     }
 }

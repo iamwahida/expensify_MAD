@@ -16,8 +16,6 @@ class AddExpenseActivity : AppCompatActivity() {
     private lateinit var tripId: String
     private lateinit var members: List<String>
 
-    private val db = FirebaseFirestore.getInstance()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_expense)
@@ -33,12 +31,12 @@ class AddExpenseActivity : AppCompatActivity() {
         participantsLayout = findViewById(R.id.participantsLayout)
         saveExpenseButton = findViewById(R.id.saveExpenseButton)
 
-        // Fill paidBy spinner
+        // Fill "Paid By" spinner
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, members)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         paidBySpinner.adapter = adapter
 
-        // Generate checkboxes for each participant
+        // Generate checkboxes for participants
         members.forEach { member ->
             val checkbox = CheckBox(this)
             checkbox.text = member
@@ -52,10 +50,11 @@ class AddExpenseActivity : AppCompatActivity() {
 
     private fun saveExpense() {
         val amount = amountEditText.text.toString().toDoubleOrNull()
-        val description = descriptionEditText.text.toString()
-        val paidBy = paidBySpinner.selectedItem.toString()
+        val description = descriptionEditText.text.toString().trim()
+        val paidBy = paidBySpinner.selectedItem?.toString() ?: ""
         val participants = mutableListOf<String>()
 
+        // Get selected participants
         for (i in 0 until participantsLayout.childCount) {
             val cb = participantsLayout.getChildAt(i) as CheckBox
             if (cb.isChecked) participants.add(cb.text.toString())
@@ -66,7 +65,8 @@ class AddExpenseActivity : AppCompatActivity() {
             return
         }
 
-        val expense = hashMapOf(
+        // Expense map for Firestore
+        val expense = mapOf(
             "tripId" to tripId,
             "description" to description,
             "amount" to amount,
@@ -75,30 +75,23 @@ class AddExpenseActivity : AppCompatActivity() {
             "timestamp" to System.currentTimeMillis()
         )
 
-        db.collection("expenses")
-            .add(expense)
+        // Save to Firestore using repository
+        ExpenseRepository.addExpense(expense)
             .addOnSuccessListener {
                 Toast.makeText(this, "Expense saved!", Toast.LENGTH_SHORT).show()
-                updateTripTotal(tripId)
-                setResult(RESULT_OK) //reload page directly
+
+                // Update trip total using repository
+                ExpenseRepository.getTotalForTrip(tripId)
+                    .addOnSuccessListener { docs ->
+                        val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
+                        TripRepository.updateTripTotal(tripId, total)
+                    }
+
+                setResult(RESULT_OK)
                 finish()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Error saving expense", Toast.LENGTH_SHORT).show()
             }
     }
-    private fun updateTripTotal(tripId: String) {
-        db.collection("expenses")
-            .whereEqualTo("tripId", tripId)
-            .get()
-            .addOnSuccessListener { docs ->
-                val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
-                db.collection("trips").document(tripId)
-                    .update("expense", total)
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Encountered Error while updating sum.", Toast.LENGTH_SHORT).show()
-            }
-    }
-
 }

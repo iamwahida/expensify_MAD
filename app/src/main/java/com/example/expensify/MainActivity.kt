@@ -7,9 +7,8 @@ import android.util.Log
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.expensify.util.DebtUtil
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 
 class MainActivity : ComponentActivity() {
 
@@ -25,7 +24,6 @@ class MainActivity : ComponentActivity() {
 
     private var skipLatestTripLoad = false
     private var currentTripId: String? = null
-    private val db = FirebaseFirestore.getInstance()
 
     private val tripResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -56,19 +54,16 @@ class MainActivity : ComponentActivity() {
         oweSummaryLayout = findViewById(R.id.oweSummaryLayout)
 
         logoutIcon.setOnClickListener {
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
 
         createTripButton.setOnClickListener {
-            val intent = Intent(this, CreateTripActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, CreateTripActivity::class.java))
         }
 
         viewAllTripsButton.setOnClickListener {
-            val intent = Intent(this, AllTripsActivity::class.java)
-            tripResultLauncher.launch(intent)
+            tripResultLauncher.launch(Intent(this, AllTripsActivity::class.java))
         }
 
         viewAllExpensesButton.setOnClickListener {
@@ -77,9 +72,7 @@ class MainActivity : ComponentActivity() {
                 return@setOnClickListener
             }
 
-            db.collection("expenses")
-                .whereEqualTo("tripId", currentTripId)
-                .get()
+            ExpenseRepository.getExpensesForTrip(currentTripId!!)
                 .addOnSuccessListener { documents ->
                     if (documents.isEmpty) {
                         showNoExpensesAlert()
@@ -105,46 +98,35 @@ class MainActivity : ComponentActivity() {
         val builder = androidx.appcompat.app.AlertDialog.Builder(this)
         builder.setTitle("No Expenses Found")
         builder.setMessage("You don't have expenses yet. Add some so you can view, edit, and delete.")
-        builder.setPositiveButton("OK") { dialog, _ ->
-            dialog.dismiss()
-        }
+        builder.setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
         builder.show()
     }
 
     @SuppressLint("SetTextI18n")
     private fun fetchLatestTrip() {
-        val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
-        if (currentUserEmail == null) {
-            Log.e("TRIP_DEBUG", "User not logged in.")
+        val email = FirebaseAuth.getInstance().currentUser?.email
+        if (email == null) {
             tripNameText.text = "User not logged in."
             addExpenseButton.isEnabled = false
             return
         }
 
-        val currentUsername = currentUserEmail.substringBefore("@")
-        Log.d("TRIP_DEBUG", "Fetching trip for user: $currentUsername")
+        val username = email.substringBefore("@")
 
-        db.collection("trips")
-            .whereArrayContains("members", currentUsername)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { documents ->
-                if (documents.isEmpty) {
-                    Log.d("TRIP_DEBUG", "No trips found for user: $currentUsername")
+        TripRepository.getLatestTripForUser(username)
+            .addOnSuccessListener { docs ->
+                if (docs.isEmpty) {
                     tripNameText.text = "No active trips."
                     addExpenseButton.isEnabled = false
                     return@addOnSuccessListener
                 }
 
-                val trip = documents.first()
+                val trip = docs.first()
                 currentTripId = trip.id
-                val tripName = trip.getString("name") ?: "Unnamed Trip"
+                val name = trip.getString("name") ?: "Unnamed Trip"
                 val members = trip.get("members") as? List<String> ?: listOf()
 
-                Log.d("TRIP_DEBUG", "Fetched trip: $tripName, Members: $members")
-
-                tripNameText.text = tripName
+                tripNameText.text = "Your $name trip:"
                 membersListText.text = members.joinToString("\n") { "• $it" }
 
                 addExpenseButton.isEnabled = true
@@ -157,22 +139,20 @@ class MainActivity : ComponentActivity() {
 
                 fetchExpensesForTrip(trip.id)
             }
-            .addOnFailureListener { e ->
-                Log.e("TRIP_DEBUG", "Error loading trip for user: $currentUsername", e)
+            .addOnFailureListener {
                 tripNameText.text = "Failed to load trip."
                 addExpenseButton.isEnabled = false
             }
     }
 
     private fun fetchTripById(tripId: String) {
-        db.collection("trips").document(tripId)
-            .get()
+        TripRepository.getTripById(tripId)
             .addOnSuccessListener { trip ->
                 currentTripId = trip.id
-                val tripName = trip.getString("name") ?: "Unnamed Trip"
+                val name = trip.getString("name") ?: "Unnamed Trip"
                 val members = trip.get("members") as? List<String> ?: listOf()
 
-                tripNameText.text = tripName
+                tripNameText.text = "Your $name trip:"
                 membersListText.text = members.joinToString("\n") { "• $it" }
 
                 addExpenseButton.isEnabled = true
@@ -194,69 +174,57 @@ class MainActivity : ComponentActivity() {
         expensesListLayout.removeAllViews()
         oweSummaryLayout.removeAllViews()
 
-        val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
-        val currentUsername = currentUserEmail?.substringBefore("@") ?: "unknown"
+        val email = FirebaseAuth.getInstance().currentUser?.email
+        val username = email?.substringBefore("@") ?: "unknown"
+        val balances = mutableMapOf<String, Double>()
 
-        val balances = mutableMapOf<String, Double>() // +ve = they owe you, -ve = you owe them
+        ExpenseRepository.getRecentExpenses(tripId, 5)
+            .addOnSuccessListener { docs ->
+                if (docs.isEmpty) {
+                    val emptyView = TextView(this)
+                    emptyView.text = "No expenses yet."
+                    emptyView.textSize = 15f
+                    emptyView.setPadding(8, 8, 8, 8)
+                    expensesListLayout.addView(emptyView)
+                    return@addOnSuccessListener
+                }
 
-        db.collection("expenses")
-            .whereEqualTo("tripId", tripId)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(5)
-            .get()
-            .addOnSuccessListener { documents ->
-                Log.d("EXPENSES_DEBUG", "Fetched ${documents.size()} expenses")
+                for (doc in docs) {
+                    val desc = doc.getString("description") ?: "No description"
+                    val amount = doc.getDouble("amount") ?: 0.0
+                    val paidBy = doc.getString("paidBy") ?: "Unknown"
+                    val participants = doc.get("participants") as? List<String> ?: emptyList()
 
-                if (documents.isEmpty) {
-                    val noExpenses = TextView(this)
-                    noExpenses.text = "No expenses yet."
-                    noExpenses.textSize = 15f
-                    noExpenses.setPadding(8, 8, 8, 8)
-                    expensesListLayout.addView(noExpenses)
-                } else {
-                    for (doc in documents) {
-                        val description = doc.getString("description") ?: "No description"
-                        val amount = doc.getDouble("amount") ?: 0.0
-                        val paidBy = doc.getString("paidBy") ?: "Unknown"
-                        val participants = doc.get("participants") as? List<String> ?: emptyList()
+                    val expenseText = TextView(this)
+                    expenseText.text = "$desc - €${"%.2f".format(amount)} (Paid by $paidBy)"
+                    expenseText.textSize = 15f
+                    expenseText.setPadding(8, 12, 8, 4)
+                    expenseText.setTextColor(resources.getColor(R.color.black))
+                    expensesListLayout.addView(expenseText)
 
-                        val expenseText = TextView(this)
-                        expenseText.text =
-                            "$description - €${"%.2f".format(amount)} (Paid by $paidBy)"
-                        expenseText.textSize = 15f
-                        expenseText.setPadding(8, 12, 8, 4)
-                        expenseText.setTextColor(resources.getColor(R.color.black))
-                        expensesListLayout.addView(expenseText)
-
-                        val debts = DebtCalculationUtil.calculateDebts(paidBy, participants, amount)
-
-                        for (debt in debts) {
-                            // Update balances (net)
-                            if (debt.to == currentUsername) {
-                                balances[debt.from] =
-                                    balances.getOrDefault(debt.from, 0.0) + debt.amount
-                            } else if (debt.from == currentUsername) {
-                                balances[debt.to] =
-                                    balances.getOrDefault(debt.to, 0.0) - debt.amount
-                            }
-
-                            val line = when {
-                                debt.to == currentUsername -> "🟢 ${debt.from} owes you €${"%.2f".format(debt.amount)}"
-                                debt.from == currentUsername -> "🔴 You owe ${debt.to} €${"%.2f".format(debt.amount)}"
-                                else -> "⚪ ${debt.from} owes ${debt.to} €${"%.2f".format(debt.amount)}"
-                            }
-
-                            val splitText = TextView(this)
-                            splitText.text = line
-                            splitText.setPadding(16, 0, 8, 4)
-                            splitText.textSize = 14f
-                            splitText.setTextColor(resources.getColor(R.color.gray))
-                            expensesListLayout.addView(splitText)
+                    val debts = DebtUtil.calculateDebts(paidBy, participants, amount)
+                    for (debt in debts) {
+                        if (debt.to == username) {
+                            balances[debt.from] = balances.getOrDefault(debt.from, 0.0) + debt.amount
+                        } else if (debt.from == username) {
+                            balances[debt.to] = balances.getOrDefault(debt.to, 0.0) - debt.amount
                         }
+
+                        val line = when {
+                            debt.to == username -> "🟢 ${debt.from} owes you €${"%.2f".format(debt.amount)}"
+                            debt.from == username -> "🔴 You owe ${debt.to} €${"%.2f".format(debt.amount)}"
+                            else -> "⚪ ${debt.from} owes ${debt.to} €${"%.2f".format(debt.amount)}"
+                        }
+
+                        val lineView = TextView(this)
+                        lineView.text = line
+                        lineView.setPadding(16, 0, 8, 4)
+                        lineView.textSize = 14f
+                        lineView.setTextColor(resources.getColor(R.color.gray))
+                        expensesListLayout.addView(lineView)
                     }
                 }
 
-                // Show net balance summary (both positive and negative)
                 if (balances.isEmpty()) {
                     val noDebts = TextView(this)
                     noDebts.text = "No balances yet."
@@ -266,25 +234,23 @@ class MainActivity : ComponentActivity() {
                 } else {
                     for ((user, balance) in balances) {
                         val summaryText = TextView(this)
-                        when {
-                            balance > 0.01 -> {
-                                summaryText.text = "🟢 $user owes you €${"%.2f".format(balance)}"
-                                summaryText.setTextColor(resources.getColor(R.color.black))
-                            }
-                            balance < -0.01 -> {
-                                summaryText.text = "🔴 You owe $user €${"%.2f".format(-balance)}"
-                                summaryText.setTextColor(resources.getColor(R.color.black))
-                            }
-                            else -> continue // skip if settled
-                        }
                         summaryText.textSize = 15f
                         summaryText.setPadding(8, 4, 8, 4)
+
+                        if (balance > 0.01) {
+                            summaryText.text = "🟢 $user owes you €${"%.2f".format(balance)}"
+                            summaryText.setTextColor(resources.getColor(R.color.black))
+                        } else if (balance < -0.01) {
+                            summaryText.text = "🔴 You owe $user €${"%.2f".format(-balance)}"
+                            summaryText.setTextColor(resources.getColor(R.color.black))
+                        } else continue
+
                         oweSummaryLayout.addView(summaryText)
                     }
                 }
             }
-            .addOnFailureListener { e ->
-                Log.e("EXPENSES_DEBUG", "Error fetching expenses", e)
+            .addOnFailureListener {
+                Log.e("EXPENSES_DEBUG", "Error fetching expenses", it)
             }
     }
 }

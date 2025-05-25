@@ -2,10 +2,10 @@ package com.example.expensify
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.widget.Button
-import android.widget.ListView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.example.expensify.repository.TripRepository
+import com.example.expensify.service.ExpenseService
 import com.example.expensify.util.CsvExportUtil
 import com.example.expensify.util.PdfExportUtil
 
@@ -36,49 +36,40 @@ class ViewAllExpensesActivity : AppCompatActivity() {
     }
 
     private fun loadTripAndExpenses() {
-        TripRepository.getTripById(tripId).addOnSuccessListener { tripDoc ->
-            members = tripDoc.get("members") as? List<String> ?: emptyList()
-            loadExpenses()
-        }.addOnFailureListener {
-            Toast.makeText(this, "Failed to load trip info.", Toast.LENGTH_SHORT).show()
-        }
+        TripRepository.getTripById(tripId)
+            .addOnSuccessListener { tripDoc ->
+                members = tripDoc.members
+                loadExpenses()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to load trip info.", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun loadExpenses() {
-        ExpenseRepository.getExpensesForTrip(tripId)
-            .addOnSuccessListener { result ->
-                expenseList = result.map { doc ->
-                    doc.toObject(ExpenseItem::class.java).copy(id = doc.id)
-                }.toMutableList()
+        ExpenseService.getExpensesForTrip(tripId)
+            .addOnSuccessListener { expenses ->
+                expenseList = expenses.toMutableList()
 
                 val adapter = ExpenseAdapter(
                     this,
                     expenseList,
                     members,
                     onDelete = { expense ->
-                        ExpenseRepository.deleteExpense(expense.id)
+                        ExpenseService.deleteExpenseAndUpdateTotal(expense, tripId)
                             .addOnSuccessListener {
-                                loadExpenses()
-                                updateTripTotal()
                                 Toast.makeText(this, "Expense deleted", Toast.LENGTH_SHORT).show()
+                                loadExpenses()
                             }
                             .addOnFailureListener {
                                 Toast.makeText(this, "Failed to delete", Toast.LENGTH_SHORT).show()
                             }
                     },
                     onEdit = { updated ->
-                        val updateData = mapOf(
-                            "amount" to updated.amount,
-                            "description" to updated.description,
-                            "paidBy" to updated.paidBy,
-                            "participants" to updated.participants
-                        )
-
-                        ExpenseRepository.updateExpense(updated.id, updateData)
+                        ExpenseService.updateExpenseAndRecalculate(updated, tripId)
                             .addOnSuccessListener {
-                                loadExpenses()
-                                updateTripTotal()
                                 Toast.makeText(this, "Expense updated", Toast.LENGTH_SHORT).show()
+                                loadExpenses()
                             }
                             .addOnFailureListener {
                                 Toast.makeText(this, "Update failed", Toast.LENGTH_SHORT).show()
@@ -90,17 +81,6 @@ class ViewAllExpensesActivity : AppCompatActivity() {
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Failed to load expenses.", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    private fun updateTripTotal() {
-        ExpenseRepository.getTotalForTrip(tripId)
-            .addOnSuccessListener { docs ->
-                val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
-                TripRepository.updateTripTotal(tripId, total)
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Failed to update total.", Toast.LENGTH_SHORT).show()
             }
     }
 }

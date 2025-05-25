@@ -9,11 +9,16 @@ object ExpenseRepository {
     private val db = FirebaseFirestore.getInstance()
     private val expensesRef = db.collection("expenses")
 
-    fun getExpensesForTrip(tripId: String): Task<QuerySnapshot> {
+    fun getExpensesForTrip(tripId: String): Task<List<ExpenseItem>> {
         return expensesRef
             .whereEqualTo("tripId", tripId)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .get()
+            .continueWith { task ->
+                task.result?.documents?.map { doc ->
+                    doc.toObject(ExpenseItem::class.java)!!.copy(id = doc.id)
+                } ?: emptyList()
+            }
     }
 
     fun getRecentExpenses(tripId: String, limit: Long = 5): Task<QuerySnapshot> {

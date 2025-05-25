@@ -4,7 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.auth.FirebaseAuth
+import com.example.expensify.service.TripService
+import com.example.expensify.util.AuthUtil
 import com.google.firebase.firestore.FirebaseFirestore
 
 class CreateTripActivity : AppCompatActivity() {
@@ -23,18 +24,15 @@ class CreateTripActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_trip)
 
-        // Enable back arrow in top bar
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Create Trip"
 
-        // Initialize views
         tripNameEditText = findViewById(R.id.tripNameEditText)
         memberEditText = findViewById(R.id.memberEditText)
         addMemberButton = findViewById(R.id.addMemberButton)
         saveTripButton = findViewById(R.id.saveTripButton)
         membersListView = findViewById(R.id.membersListView)
 
-        // Adapter for showing members in a list
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, members)
         membersListView.adapter = adapter
 
@@ -54,7 +52,12 @@ class CreateTripActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val creator = getCurrentUsername()
+            val creator = AuthUtil.getCurrentUsername()
+            if (creator == null) {
+                Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             if (!members.contains(creator)) members.add(creator)
 
             val trip = hashMapOf(
@@ -64,8 +67,7 @@ class CreateTripActivity : AppCompatActivity() {
                 "createdAt" to System.currentTimeMillis()
             )
 
-            db.collection("trips")
-                .add(trip)
+            TripService.createTrip(tripName, members, creator)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Trip created successfully!", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, MainActivity::class.java)
@@ -77,15 +79,10 @@ class CreateTripActivity : AppCompatActivity() {
                     Toast.makeText(this, "Failed to create trip: ${e.message}", Toast.LENGTH_SHORT).show()
                     e.printStackTrace()
                 }
+
         }
     }
 
-    private fun getCurrentUsername(): String {
-        val email = FirebaseAuth.getInstance().currentUser?.email ?: ""
-        return email.substringBefore("@")
-    }
-
-    // Handle back arrow (top left)
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true

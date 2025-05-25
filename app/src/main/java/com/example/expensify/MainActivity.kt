@@ -1,14 +1,16 @@
 package com.example.expensify
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.expensify.service.AuthService
+import com.example.expensify.service.TripService
 import com.example.expensify.util.DebtUtil
-import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -24,13 +26,13 @@ class MainActivity : ComponentActivity() {
 
     private var skipLatestTripLoad = false
     private var currentTripId: String? = null
+    private var currentTripMembers: List<String> = emptyList()
 
     private val tripResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val selectedTripId = data?.getStringExtra("selectedTripId")
+            val selectedTripId = result.data?.getStringExtra("selectedTripId")
             if (selectedTripId != null) {
                 skipLatestTripLoad = true
                 currentTripId = selectedTripId
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
         oweSummaryLayout = findViewById(R.id.oweSummaryLayout)
 
         logoutIcon.setOnClickListener {
+            AuthService.logout()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
@@ -73,8 +76,8 @@ class MainActivity : ComponentActivity() {
             }
 
             ExpenseRepository.getExpensesForTrip(currentTripId!!)
-                .addOnSuccessListener { documents ->
-                    if (documents.isEmpty) {
+                .addOnSuccessListener { docs ->
+                    if (docs.isEmpty()) {
                         showNoExpensesAlert()
                     } else {
                         val intent = Intent(this, ViewAllExpensesActivity::class.java)
@@ -95,45 +98,42 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showNoExpensesAlert() {
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setTitle("No Expenses Found")
-        builder.setMessage("You don't have expenses yet. Add some so you can view, edit, and delete.")
-        builder.setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
-        builder.show()
+        AlertDialog.Builder(this)
+            .setTitle("No Expenses Found")
+            .setMessage("You don't have expenses yet. Add some so you can view, edit, and delete.")
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     @SuppressLint("SetTextI18n")
     private fun fetchLatestTrip() {
-        val email = FirebaseAuth.getInstance().currentUser?.email
-        if (email == null) {
+        val username = AuthService.getCurrentUsername()
+        if (username == null) {
             tripNameText.text = "User not logged in."
             addExpenseButton.isEnabled = false
             return
         }
 
-        val username = email.substringBefore("@")
-
-        TripRepository.getLatestTripForUser(username)
-            .addOnSuccessListener { docs ->
-                if (docs.isEmpty) {
+        TripService.getLatestTrip(username)
+            .addOnSuccessListener { trips ->
+                if (trips.isEmpty()) {
                     tripNameText.text = "No active trips."
                     addExpenseButton.isEnabled = false
                     return@addOnSuccessListener
                 }
 
-                val trip = docs.first()
+                val trip = trips.first()
                 currentTripId = trip.id
-                val name = trip.getString("name") ?: "Unnamed Trip"
-                val members = trip.get("members") as? List<String> ?: listOf()
+                currentTripMembers = trip.members
 
-                tripNameText.text = "Your $name trip:"
-                membersListText.text = members.joinToString("\n") { "• $it" }
+                tripNameText.text = "Your ${trip.name} trip:"
+                membersListText.text = trip.members.joinToString("\n") { "• $it" }
 
                 addExpenseButton.isEnabled = true
                 addExpenseButton.setOnClickListener {
                     val intent = Intent(this, AddExpenseActivity::class.java)
                     intent.putExtra("tripId", trip.id)
-                    intent.putExtra("members", ArrayList(members))
+                    intent.putExtra("members", ArrayList(trip.members))
                     startActivity(intent)
                 }
 
@@ -146,20 +146,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun fetchTripById(tripId: String) {
-        TripRepository.getTripById(tripId)
+        TripService.getTripById(tripId)
             .addOnSuccessListener { trip ->
                 currentTripId = trip.id
-                val name = trip.getString("name") ?: "Unnamed Trip"
-                val members = trip.get("members") as? List<String> ?: listOf()
+                currentTripMembers = trip.members
 
-                tripNameText.text = "Your $name trip:"
-                membersListText.text = members.joinToString("\n") { "• $it" }
+                tripNameText.text = "Your ${trip.name} trip:"
+                membersListText.text = trip.members.joinToString("\n") { "• $it" }
 
                 addExpenseButton.isEnabled = true
                 addExpenseButton.setOnClickListener {
                     val intent = Intent(this, AddExpenseActivity::class.java)
                     intent.putExtra("tripId", trip.id)
-                    intent.putExtra("members", ArrayList(members))
+                    intent.putExtra("members", ArrayList(trip.members))
                     startActivity(intent)
                 }
 
@@ -174,8 +173,7 @@ class MainActivity : ComponentActivity() {
         expensesListLayout.removeAllViews()
         oweSummaryLayout.removeAllViews()
 
-        val email = FirebaseAuth.getInstance().currentUser?.email
-        val username = email?.substringBefore("@") ?: "unknown"
+        val username = AuthService.getCurrentUsername() ?: return
         val balances = mutableMapOf<String, Double>()
 
         ExpenseRepository.getRecentExpenses(tripId, 5)

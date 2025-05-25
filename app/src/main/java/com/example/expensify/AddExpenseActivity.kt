@@ -3,7 +3,7 @@ package com.example.expensify
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.expensify.service.ExpenseService
 
 class AddExpenseActivity : AppCompatActivity() {
 
@@ -31,12 +31,12 @@ class AddExpenseActivity : AppCompatActivity() {
         participantsLayout = findViewById(R.id.participantsLayout)
         saveExpenseButton = findViewById(R.id.saveExpenseButton)
 
-        // Fill "Paid By" spinner
+        // Fill spinner
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, members)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         paidBySpinner.adapter = adapter
 
-        // Generate checkboxes for participants
+        // Add checkboxes
         members.forEach { member ->
             val checkbox = CheckBox(this)
             checkbox.text = member
@@ -54,7 +54,6 @@ class AddExpenseActivity : AppCompatActivity() {
         val paidBy = paidBySpinner.selectedItem?.toString() ?: ""
         val participants = mutableListOf<String>()
 
-        // Get selected participants
         for (i in 0 until participantsLayout.childCount) {
             val cb = participantsLayout.getChildAt(i) as CheckBox
             if (cb.isChecked) participants.add(cb.text.toString())
@@ -65,7 +64,6 @@ class AddExpenseActivity : AppCompatActivity() {
             return
         }
 
-        // Expense map for Firestore
         val expense = mapOf(
             "tripId" to tripId,
             "description" to description,
@@ -75,18 +73,9 @@ class AddExpenseActivity : AppCompatActivity() {
             "timestamp" to System.currentTimeMillis()
         )
 
-        // Save to Firestore using repository
-        ExpenseRepository.addExpense(expense)
+        ExpenseService.addExpenseAndUpdateTotal(expense, tripId)
             .addOnSuccessListener {
                 Toast.makeText(this, "Expense saved!", Toast.LENGTH_SHORT).show()
-
-                // Update trip total using repository
-                ExpenseRepository.getTotalForTrip(tripId)
-                    .addOnSuccessListener { docs ->
-                        val total = docs.sumOf { it.getDouble("amount") ?: 0.0 }
-                        TripRepository.updateTripTotal(tripId, total)
-                    }
-
                 setResult(RESULT_OK)
                 finish()
             }

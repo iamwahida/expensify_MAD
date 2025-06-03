@@ -6,22 +6,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/lavender2"
+    android:paddingTop="35dp"
     tools:context=".MainActivity">
 
     <!-- Logout Icon -->
+
+    <!-- Top Buttons -->
+
     <ImageButton
         android:id="@+id/logoutIcon"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="24dp"
+        android:layout_marginEnd="28dp"
         android:background="@android:color/transparent"
         android:contentDescription="Logout"
         android:src="@drawable/baseline_logout_24"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Top Buttons -->
     <Button
         android:id="@+id/viewAllTripsButton"
         android:layout_width="0dp"
